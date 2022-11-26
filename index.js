@@ -50,9 +50,9 @@ async function run() {
             // console.log(req.query);
             let query = {};
 
-            if (req.query.category_id) {
+            if (req.query.category) {
                 query = {
-                    category_id: req.query.category_id
+                    category: req.query.category
                 }
             }
             else if (req.query.email) {
@@ -72,9 +72,9 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/categoryDetails/:category_id', async (req, res) => {
-            const category_id = req.params.category_id;
-            const filter = { category_id };
+        app.get('/categoryDetails/:category', async (req, res) => {
+            const category = req.params.category;
+            const filter = { category };
             const result = await categoryDetailsCollection.findOne(filter);
             res.send(result);
         });
@@ -144,7 +144,7 @@ async function run() {
             const options = { upsert: true };
             const updatedDoc = {
                 $set: {
-                    role: 'admin'
+                    verified: 'yes'
                 }
             }
             const result = await usersCollection.updateOne(filter, updatedDoc, options);
@@ -157,14 +157,18 @@ async function run() {
             const user = await usersCollection.findOne(query);
             res.send({ isSeller: user?.role === 'seller' });
         })
-
-        // app.get('/bookings', async (req, res) => {
-        //     const email = req.query.email;
-        //     const query = { email: email };
-        //     const bookings = await bookingsCollection.find(query).toArray();
-        //     res.send(bookings);
-
-        // })
+        app.put('/users/seller/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    status: 'sold'
+                }
+            }
+            const result = await categoryDetailsCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        })
 
 
     }
