@@ -96,6 +96,12 @@ async function run() {
 
         })
 
+        app.get('/bookingPaid', async (req, res) => {
+            const query = {};
+            const result = await bookingsCollection.find(query).project({ paid: 1 }).toArray();
+            res.send(result);
+        })
+
         app.get('/bookings/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
@@ -178,7 +184,6 @@ async function run() {
             const user = await usersCollection.findOne(query);
             res.send({ isAdmin: user?.role === 'admin' });
         })
-
         app.put('/users/admin/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
@@ -198,13 +203,27 @@ async function run() {
             const user = await usersCollection.findOne(query);
             res.send({ isSeller: user?.role === 'seller' });
         })
+
+        app.get('/seller/verified/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email }
+            const user = await usersCollection.findOne(query);
+            res.send({ isVerified: user?.verified === 'yes' });
+        })
+        app.get('/product/paid/:productId', async (req, res) => {
+            const product_id = req.params.product_id;
+            const query = { product_id }
+            const product = await bookingsCollection.findOne(query);
+            res.send({ isPaid: product?.paid === true });
+        })
+
         app.put('/users/seller/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const options = { upsert: true };
             const updatedDoc = {
                 $set: {
-                    status: 'sold'
+                    advertisement: true
                 }
             }
             const result = await categoryDetailsCollection.updateOne(filter, updatedDoc, options);
