@@ -40,6 +40,7 @@ async function run() {
         const categoriesCollection = client.db('prelovedCo').collection('categories');
         const categoryDetailsCollection = client.db('prelovedCo').collection('categoryDetails');
         const bookingsCollection = client.db('prelovedCo').collection('bookings');
+        const wishlistCollection = client.db('prelovedCo').collection('wishlists');
         const usersCollection = client.db('prelovedCo').collection('users');
         const paymentsCollection = client.db('prelovedCo').collection('payments');
 
@@ -129,9 +130,21 @@ async function run() {
             res.send(booking);
         })
 
-        app.post('/bookings', verifyJWT, async (req, res) => {
+        app.post('/bookings', async (req, res) => {
             const booking = req.body;
             const result = await bookingsCollection.insertOne(booking);
+            res.send(result);
+        })
+        app.get('/wishlists', async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email };
+            const wishlists = await wishlistCollection.find(query).toArray();
+            res.send(wishlists);
+
+        })
+        app.post('/wishlists', async (req, res) => {
+            const wishlist = req.body;
+            const result = await wishlistCollection.insertOne(wishlist);
             res.send(result);
         })
 
