@@ -15,12 +15,6 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.s0qswnv.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
-const categoriesCollection = client.db('prelovedCo').collection('categories');
-const categoryDetailsCollection = client.db('prelovedCo').collection('categoryDetails');
-const bookingsCollection = client.db('prelovedCo').collection('bookings');
-const usersCollection = client.db('prelovedCo').collection('users');
-const paymentsCollection = client.db('prelovedCo').collection('payments');
-
 function verifyJWT(req, res, next) {
 
     const authHeader = req.headers.authorization;
@@ -42,6 +36,32 @@ function verifyJWT(req, res, next) {
 
 async function run() {
     try {
+
+        const categoriesCollection = client.db('prelovedCo').collection('categories');
+        const categoryDetailsCollection = client.db('prelovedCo').collection('categoryDetails');
+        const bookingsCollection = client.db('prelovedCo').collection('bookings');
+        const usersCollection = client.db('prelovedCo').collection('users');
+        const paymentsCollection = client.db('prelovedCo').collection('payments');
+
+        const verifyAdmin = async (req, res, next) => {
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+            if (user.role !== 'admin') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+        const verifySeller = async (req, res, next) => {
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+            if (user.role !== 'seller') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+
         app.get('/categories', async (req, res) => {
             const query = {};
             const categories = await categoriesCollection.find(query).toArray();
@@ -68,7 +88,7 @@ async function run() {
             res.send(details);
         })
 
-        app.post('/categoryDetails', async (req, res) => {
+        app.post('/categoryDetails', verifyJWT, verifySeller, async (req, res) => {
             const details = req.body;
             const result = await categoryDetailsCollection.insertOne(details);
             res.send(result);
@@ -81,7 +101,7 @@ async function run() {
             res.send(result);
         });
 
-        app.delete('/categoryDetails/:id', async (req, res) => {
+        app.delete('/categoryDetails/:id', verifyJWT, verifySeller, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const result = await categoryDetailsCollection.deleteOne(filter);
@@ -109,13 +129,13 @@ async function run() {
             res.send(booking);
         })
 
-        app.post('/bookings', async (req, res) => {
+        app.post('/bookings', verifyJWT, async (req, res) => {
             const booking = req.body;
             const result = await bookingsCollection.insertOne(booking);
             res.send(result);
         })
 
-        app.post('/create-payment-intent', async (req, res) => {
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
             const booking = req.body;
             const price = booking.price;
             const amount = price * 100;
@@ -132,7 +152,7 @@ async function run() {
             });
         });
 
-        app.post('/payments', async (req, res) => {
+        app.post('/payments', verifyJWT, async (req, res) => {
             const payment = req.body;
             const result = await paymentsCollection.insertOne(payment);
             const id = payment.bookingId
@@ -171,7 +191,7 @@ async function run() {
             res.send(result);
         })
 
-        app.delete('/users/:id', async (req, res) => {
+        app.delete('/users/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const result = await usersCollection.deleteOne(filter);
@@ -184,7 +204,7 @@ async function run() {
             const user = await usersCollection.findOne(query);
             res.send({ isAdmin: user?.role === 'admin' });
         })
-        app.put('/users/admin/:id', async (req, res) => {
+        app.put('/users/admin/:id', verifyJWT, verifyJWT, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const options = { upsert: true };
@@ -217,7 +237,7 @@ async function run() {
             res.send({ isPaid: product?.paid === true });
         })
 
-        app.put('/users/seller/:id', async (req, res) => {
+        app.put('/users/seller/:id', verifyJWT, verifySeller, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const options = { upsert: true };
